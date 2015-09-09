@@ -1,3 +1,7 @@
-print("Hello World!")
-for i in range(1, 20):
-    print(i)
+from bs4 import BeautifulSoup
+
+f = open('../DataSet/reut2-000.sgm', 'r')
+data = f.read()
+soup = BeautifulSoup(data, 'html.parser')
+bodies = soup.findAll('body')
+print len(bodies)
