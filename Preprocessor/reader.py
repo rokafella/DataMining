@@ -8,6 +8,7 @@ allfiles = glob.glob("../DataSet/*.sgm")
 tags = ['topics', 'places', 'title', 'dateline', 'body']
 stop = stopwords.words('english')
 
+
 def remove_tags(text):
     return ' '.join(eT.fromstring(text).itertext())
 
@@ -17,7 +18,7 @@ for datafile in allfiles:
     for tag in tags:
         collections = soup.findAll(tag)
         plain_string = remove_tags(str(collections[0]).replace('', ''))
-        final_string = plain_string.translate(string.maketrans('', ''), string.punctuation)
+        final_string = plain_string.translate(string.maketrans('', ''), string.punctuation).lower()
         filtered_words = [word for word in final_string.split() if word not in stop]
         print filtered_words
 # f = open('../DataSet/reut2-000.sgm', 'r')
