@@ -2,10 +2,11 @@ from bs4 import BeautifulSoup
 import glob
 import xml.etree.ElementTree as eT
 import string
+from nltk.corpus import stopwords
 
 allfiles = glob.glob("../DataSet/*.sgm")
 tags = ['topics', 'places', 'title', 'dateline', 'body']
-
+stop = stopwords.words('english')
 
 def remove_tags(text):
     return ' '.join(eT.fromstring(text).itertext())
@@ -17,7 +18,8 @@ for datafile in allfiles:
         collections = soup.findAll(tag)
         plain_string = remove_tags(str(collections[0]).replace('', ''))
         final_string = plain_string.translate(string.maketrans('', ''), string.punctuation)
-        print final_string
+        filtered_words = [word for word in final_string.split() if word not in stop]
+        print filtered_words
 # f = open('../DataSet/reut2-000.sgm', 'r')
 # data = f.read()
 # soup = BeautifulSoup(data, 'html.parser')
