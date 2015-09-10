@@ -1,21 +1,23 @@
 from bs4 import BeautifulSoup
 import glob
 import xml.etree.ElementTree as eT
+import string
 
 allfiles = glob.glob("../DataSet/*.sgm")
-tags = ['body']
+tags = ['topics', 'places', 'title', 'dateline', 'body']
 
 
 def remove_tags(text):
     return ' '.join(eT.fromstring(text).itertext())
 
-for datafile in allfiles[:1]:
+for datafile in allfiles:
     f = open(datafile, 'r')
     soup = BeautifulSoup(f.read(), 'html.parser')
     for tag in tags:
         collections = soup.findAll(tag)
-        print str(collections[0]).replace('', '')
-        print remove_tags(str(collections[0]).replace('', ''))
+        plain_string = remove_tags(str(collections[0]).replace('', ''))
+        final_string = plain_string.translate(string.maketrans('', ''), string.punctuation)
+        print final_string
 # f = open('../DataSet/reut2-000.sgm', 'r')
 # data = f.read()
 # soup = BeautifulSoup(data, 'html.parser')
