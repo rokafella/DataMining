@@ -3,19 +3,19 @@ import glob
 import xml.etree.ElementTree as eT
 
 allfiles = glob.glob("../DataSet/*.sgm")
-tags = ['places']
+tags = ['body']
 
 
 def remove_tags(text):
     return ' '.join(eT.fromstring(text).itertext())
 
-for datafile in allfiles:
+for datafile in allfiles[:1]:
     f = open(datafile, 'r')
     soup = BeautifulSoup(f.read(), 'html.parser')
     for tag in tags:
         collections = soup.findAll(tag)
-        print remove_tags(str(collections[0]))
-        print collections[0]
+        print str(collections[0]).replace('', '')
+        print remove_tags(str(collections[0]).replace('', ''))
 # f = open('../DataSet/reut2-000.sgm', 'r')
 # data = f.read()
 # soup = BeautifulSoup(data, 'html.parser')
