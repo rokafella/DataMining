@@ -1,23 +1,24 @@
 from bs4 import BeautifulSoup
 import glob
 import string
-import nltk
 from collections import Counter
 from nltk.corpus import stopwords
 
-allfiles = glob.glob("../DataSet/*.sgm")
+allfiles = glob.glob("../DataSet/*-000.sgm")
 tags = ['topics', 'places', 'title', 'dateline', 'body']
 stop = stopwords.words('english')
 
-total = 0
+articles = 0
 
-words = []
+allArticles = {}
 
 for datafile in allfiles:
     f = open(datafile, 'r')
     soup = BeautifulSoup(f.read(), "html.parser")
 
     for article in soup.findAll('reuters'):
+        words = []
+        articles += 1
         for tag in tags:
             text = article.find(tag)
             if text:
@@ -25,10 +26,10 @@ for datafile in allfiles:
                 final_string = text.translate(None, string.punctuation).lower()
                 filtered_words = [word for word in final_string.split() if word not in stop]
                 words += filtered_words
-                total += len(filtered_words)
+        allArticles[articles] = Counter(words)
 
     print datafile + " done"
 
-print str(total) + " words"
-tokens = nltk.word_tokenize(' '.join(words))
-print Counter(tokens).most_common(10)
+print str(articles) + " articles"
+print allArticles
+print len(allArticles.keys())
