@@ -10,8 +10,13 @@ stop = stopwords.words('english')
 
 articles = 0
 
+# Dictionary storing all the documents and word frequencies
 allArticles = {}
 
+# List to store unique words per article to find in how many articles a word is appearing
+uniqueWords = []
+
+# Reading file and creating Term Frequencies per article
 for datafile in allfiles:
     f = open(datafile, 'r')
     soup = BeautifulSoup(f.read(), "html.parser")
@@ -27,9 +32,8 @@ for datafile in allfiles:
                 filtered_words = [word for word in final_string.split() if word not in stop]
                 words += filtered_words
         allArticles[articles] = Counter(words)
+        uniqueWords += allArticles[articles].keys()
 
     print datafile + " done"
 
-print str(articles) + " articles"
-print allArticles
-print len(allArticles.keys())
+print Counter(uniqueWords)
