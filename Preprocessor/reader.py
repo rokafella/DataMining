@@ -3,7 +3,7 @@ import glob
 import string
 import math
 import csv
-from collections import Counter
+from newcollections import Counter
 from nltk.corpus import stopwords
 
 allfiles = glob.glob("../DataSet/*000.sgm")
@@ -98,6 +98,6 @@ for i in tf_Idf.keys():
             row.append(0)
     feature_vector.append(row)
 
-with open('../Output/FeatureVector_tfidf', 'wb') as f:
+with open('../Output/FeatureVector_tfidf.csv', 'wb') as f:
     w = csv.writer(f)
     w.writerows(feature_vector)
