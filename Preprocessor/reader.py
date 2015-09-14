@@ -5,12 +5,14 @@ import math
 import csv
 from newcollections import Counter
 from nltk.corpus import stopwords
+from nltk.stem.snowball import SnowballStemmer
 
 __author__ = "Rohit Kapoor and Nandkumar Khobare"
 
 allfiles = glob.glob("../DataSet/*.sgm")
 tags = ['topics', 'places', 'title', 'dateline', 'body']
 stop = stopwords.words('english')
+stemmer = SnowballStemmer('english')
 
 # To count the total number of articles
 articles = 0
@@ -34,7 +36,7 @@ for datafile in allfiles:
             if text:
                 text = text.text.encode("ascii", "ignore")
                 final_string = text.translate(None, string.punctuation).lower()
-                filtered_words = [word for word in final_string.split() if word not in stop]
+                filtered_words = [stemmer.stem(word) for word in final_string.split() if word not in stop]
                 words += filtered_words
         tf[articles] = Counter(words)
         uniqueWords += tf[articles].keys()
