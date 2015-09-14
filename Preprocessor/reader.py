@@ -6,7 +6,9 @@ import csv
 from newcollections import Counter
 from nltk.corpus import stopwords
 
-allfiles = glob.glob("../DataSet/*000.sgm")
+__author__ = "Rohit Kapoor and Nandkumar Khobare"
+
+allfiles = glob.glob("../DataSet/*.sgm")
 tags = ['topics', 'places', 'title', 'dateline', 'body']
 stop = stopwords.words('english')
 
@@ -80,24 +82,39 @@ for word, val in allWords:
 # Filtering top 1000 words
 feature_words = feature_words[:1000]
 
-# For storing the feature vector
-feature_vector = []
+# For storing the feature vector with tf-idf
+feature_vector_tfidf = []
+
+# For storing the feature vector with 0/1 (simple)
+feature_vector_simple = []
 
 # First column of the matrix representing document-id
 heading = ['documentId']
 heading.extend(feature_words)
 
-feature_vector.append(heading)
+feature_vector_tfidf.append(heading)
+feature_vector_simple.append(heading)
 
+# Creating the feature vectors by iterating over feature words
 for i in tf_Idf.keys():
     row = [i]
+    row_s = [i]
     for word in feature_words:
         if word in tf_Idf[i]:
             row.append(tf_Idf[i][word])
+            row_s.append(1)
         else:
             row.append(0)
-    feature_vector.append(row)
+            row_s.append(0)
+    feature_vector_tfidf.append(row)
+    feature_vector_simple.append(row_s)
 
+# Writing to the csv file which can be opened using excel
 with open('../Output/FeatureVector_tfidf.csv', 'wb') as f:
     w = csv.writer(f)
-    w.writerows(feature_vector)
+    w.writerows(feature_vector_tfidf)
+
+# Writing to csv file which can be opened using excel
+with open('../Output/FeatureVector_simple.csv', 'wb') as f:
+    w = csv.writer(f)
+    w.writerows(feature_vector_simple)
