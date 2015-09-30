@@ -10,7 +10,7 @@ from nltk.stem.snowball import SnowballStemmer
 __author__ = "Rohit Kapoor and Nandkumar Khobare"
 
 allfiles = glob.glob("../DataSet/*.sgm")
-tags = ['topics', 'places', 'title', 'dateline', 'body']
+tags = ['places', 'title', 'dateline', 'body']
 stop = stopwords.words('english')
 stemmer = SnowballStemmer('english')
 
@@ -20,8 +20,14 @@ articles = 0
 # Dictionary storing all the documents and word frequencies
 tf = {}
 
+# Dictionary storing all the topics with there document ID
+topic_dict = {}
+
 # List to store unique words per article to find in how many articles a word is appearing
 uniqueWords = []
+
+# A set of all topics
+topic_set = set()
 
 # Reading file and creating Term Frequencies per article
 for datafile in allfiles:
@@ -30,16 +36,23 @@ for datafile in allfiles:
 
     for article in soup.findAll('reuters'):
         words = []
-        articles += 1
-        for tag in tags:
-            text = article.find(tag)
-            if text:
-                text = text.text.encode("ascii", "ignore")
-                final_string = text.translate(None, string.punctuation).lower()
-                filtered_words = [stemmer.stem(word) for word in final_string.split() if word not in stop]
-                words += filtered_words
-        tf[articles] = Counter(words)
-        uniqueWords += tf[articles].keys()
+        topic = article.find('topics')
+        if topic:
+            topic_text = topic.get_text(' ').encode("ascii", "ignore")
+            if len(topic_text) > 0:
+                articles += 1
+                topic_list = topic_text.split(' ')
+                topic_dict[articles] = topic_list
+                topic_set = topic_set.union(topic_list)
+                for tag in tags:
+                    text = article.find(tag)
+                    if text:
+                        text = text.get_text(' ').encode("ascii", "ignore")
+                        final_string = text.translate(None, string.punctuation).lower()
+                        filtered_words = [stemmer.stem(word) for word in final_string.split() if word not in stop]
+                        words += filtered_words
+                tf[articles] = Counter(words)
+                uniqueWords += tf[articles].keys()
 
     print datafile + " done"
 
@@ -56,15 +69,15 @@ for word in appearance.keys():
 # Saving TF-IDF values for all the words per article
 tf_Idf = tf.copy()
 
-# Storing most common 1000 words per article
+# Storing most common 2048 words per article
 allWords = []
 
-# Counting the TF-IDF for each word and storing most common 500 words in allWords
+# Counting the TF-IDF for each word and storing most common 2048 words in allWords
 for i in tf_Idf.keys():
     art = tf_Idf[i]
     for word in art.keys():
         art[word] *= idf[word]
-    allWords += art.most_common(1000)
+    allWords += art.most_common(2048)
 
 # Sorting all the words according to TF-IDF value
 allWords.sort(key=lambda tup: tup[1], reverse=True)
@@ -77,46 +90,33 @@ feature_words = []
 
 # Filtering unique words
 for word, val in allWords:
-    if word not in seen:
+    if word not in seen and word not in topic_set:
         feature_words.append(word)
         seen.add(word)
 
-# Filtering top 1000 words
-feature_words = feature_words[:1000]
+# Filtering top 2048 words
+feature_words = feature_words[:2048]
 
 # For storing the feature vector with tf-idf
 feature_vector_tfidf = []
-
-# For storing the feature vector with 0/1 (simple)
-feature_vector_simple = []
 
 # First column of the matrix representing document-id
 heading = ['documentId']
 heading.extend(feature_words)
 
 feature_vector_tfidf.append(heading)
-feature_vector_simple.append(heading)
 
 # Creating the feature vectors by iterating over feature words
 for i in tf_Idf.keys():
     row = [i]
-    row_s = [i]
     for word in feature_words:
         if word in tf_Idf[i]:
             row.append(tf_Idf[i][word])
-            row_s.append(1)
         else:
             row.append(0)
-            row_s.append(0)
     feature_vector_tfidf.append(row)
-    feature_vector_simple.append(row_s)
 
 # Writing to the csv file which can be opened using excel
 with open('../Output/FeatureVector_tfidf.csv', 'wb') as f:
     w = csv.writer(f)
     w.writerows(feature_vector_tfidf)
-
-# Writing to csv file which can be opened using excel
-with open('../Output/FeatureVector_simple.csv', 'wb') as f:
-    w = csv.writer(f)
-    w.writerows(feature_vector_simple)
