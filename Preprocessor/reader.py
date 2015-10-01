@@ -106,23 +106,25 @@ heading.extend(feature_words)
 
 feature_vector.append(heading)
 
-attribute_type = ['discrete'] * (len(feature_words) + 1)
+attribute_type = ['d'] * (len(feature_words) + 1)
 
 feature_vector.append(attribute_type)
 
-feature_type = ['class']
+feature_type = ['c']
 
 feature_vector.append(feature_type)
 
 # Creating the feature vectors by iterating over feature words
 for i in tf_Idf.keys():
-    row = [i]
-    for word in feature_words:
-        if word in tf_Idf[i]:
-            row.append(1)
-        else:
-            row.append(0)
-    feature_vector.append(row)
+    topics = topic_dict[i]
+    for topic in topics:
+        row = [topic]
+        for word in feature_words:
+            if word in tf_Idf[i]:
+                row.append(1)
+            else:
+                row.append(0)
+        feature_vector.append(row)
 
 # Writing to the tab file which can be opened using excel
 with open('../Output/FeatureVector_tfidf.tab', 'wb') as f:
