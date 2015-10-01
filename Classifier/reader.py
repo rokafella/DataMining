@@ -17,6 +17,11 @@ tags = ['places', 'title', 'dateline', 'body']
 stop = stopwords.words('english')
 stemmer = SnowballStemmer('english')
 
+# Configuration parameters
+features = 2048
+features_reduced = 512
+testing_percent = 20
+
 # To count the total number of articles
 articles = 0
 
@@ -72,15 +77,15 @@ for word in appearance.keys():
 # Saving TF-IDF values for all the words per article
 tf_Idf = tf.copy()
 
-# Storing most common 2048 words per article
+# Storing most common words per article
 allWords = []
 
-# Counting the TF-IDF for each word and storing most common 2048 words in allWords
+# Counting the TF-IDF for each word and storing most common words in allWords
 for i in tf_Idf.keys():
     art = tf_Idf[i]
     for word in art.keys():
         art[word] *= idf[word]
-    allWords += art.most_common(2048)
+    allWords += art.most_common(features)
 
 # Sorting all the words according to TF-IDF value
 allWords.sort(key=lambda tup: tup[1], reverse=True)
@@ -97,31 +102,52 @@ for word, val in allWords:
         feature_words.append(word)
         seen.add(word)
 
-# Filtering top 2048 words
-feature_words = feature_words[:2048]
+# Filtering top words
+feature_words = feature_words[:features]
 
-# For storing the feature vector with tf-idf
+# Filtering reduced set of feature words
+feature_words_reduced = feature_words[:features_reduced]
+
+# For storing the feature vector
 feature_vector = []
 
-# First column of the matrix representing document-id
+# For storing the reduced feature vector
+feature_vector_reduced = []
+
+# First column of the matrix representing class
 heading = ['topic']
 heading.extend(feature_words)
 
 feature_vector.append(heading)
 
+# Similar heading for reduced feature vector
+heading = ['topic']
+heading.extend(feature_words_reduced)
+
+feature_vector_reduced.append(heading)
+
+# Adding Orange attribute type
 attribute_type = ['d'] * (len(feature_words) + 1)
 
 feature_vector.append(attribute_type)
 
+# Adding Orange attribute type for reduced feature vector
+attribute_type = ['d'] * (len(feature_words_reduced) + 1)
+
+feature_vector_reduced.append(attribute_type)
+
 feature_type = ['c']
 
 feature_vector.append(feature_type)
+feature_vector_reduced.append(feature_type)
 
 # Creating the feature vectors by iterating over feature words
 for i in tf_Idf.keys():
     topics = topic_dict[i]
     for topic in topics:
         row = [topic]
+        row_reduced = [topic]
+
         for word in feature_words:
             if word in tf_Idf[i]:
                 row.append(1)
@@ -129,34 +155,62 @@ for i in tf_Idf.keys():
                 row.append(0)
         feature_vector.append(row)
 
+        for word in feature_words_reduced:
+            if word in tf_Idf[i]:
+                row_reduced.append(1)
+            else:
+                row_reduced.append(0)
+        feature_vector_reduced.append(row_reduced)
+
 # Writing to the tab file which will be used by Orange
 with open('../Output/FeatureVector.tab', 'wb') as f:
     w = csv.writer(f, delimiter='\t')
     w.writerows(feature_vector)
 
-accurate_word_count = 0
-total_word_count = 1000
-# Loading the feature vector in Orange
-data = Orange.data.Table('../Output/FeatureVector.tab')
+# Writing to the tab file which will be used by Orange
+with open('../Output/FeatureVector_reduced.tab', 'wb') as f:
+    w = csv.writer(f, delimiter='\t')
+    w.writerows(feature_vector_reduced)
 
-test = Orange.data.Table(random.sample(data, total_word_count))
-train = Orange.data.Table([d for d in data if d not in test])
+for current_features in [features, features_reduced]:
+    print "Starting classification for " + str(current_features) + " features"
 
-start = time.clock()
-print "Start time is : " + str(start)
+    test_data_size = int((testing_percent * current_features) / 100)
 
-# classifier = Orange.classification.knn.kNNLearner(train)
-classifier = Orange.classification.bayes.NaiveLearner(train)
+    # Selecting appropriate files
+    file_name = None
+    if current_features == features:
+        file_name = '../Output/FeatureVector.tab'
+    else:
+        file_name = '../Output/FeatureVector_reduced.tab'
 
-for d in test:
-    print "%10s; originally %s" % (classifier(d), d.getclass())
-    if classifier(d) == d.getclass():
-        accurate_word_count += 1
+    # Loading the feature vector in Orange
+    data = Orange.data.Table(file_name)
 
-end = time.clock()
-print "End time is : " + str(end)
-print "Execution time in seconds : " + str(end - start)
+    # Dividing testing and training data
+    test = Orange.data.Table(random.sample(data, test_data_size))
+    train = Orange.data.Table([d for d in data if d not in test])
 
-print accurate_word_count
-print "Accuracy percentage : " + str(float(accurate_word_count * 100 / total_word_count))
+    start = time.clock()
+    print "Starting training: " + str(start)
 
+    #classifier = Orange.classification.knn.kNNLearner(train)
+    classifier = Orange.classification.bayes.NaiveLearner(train)
+
+    end = time.clock()
+    print "Finished training: " + str(end)
+    print "Training time : " + str(end - start)
+
+    start = time.clock()
+    print "Starting testing: " + str(start)
+
+    accurate_word_count = 0
+
+    for d in test:
+        if classifier(d) == d.getclass():
+            accurate_word_count += 1
+
+    end = time.clock()
+    print "Finished testing: " + str(end)
+    print "Testing time : " + str(end - start)
+    print "Classification accuracy percentage : " + str(float(accurate_word_count * 100 / test_data_size))
