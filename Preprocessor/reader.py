@@ -98,25 +98,33 @@ for word, val in allWords:
 feature_words = feature_words[:2048]
 
 # For storing the feature vector with tf-idf
-feature_vector_tfidf = []
+feature_vector = []
 
 # First column of the matrix representing document-id
-heading = ['documentId']
+heading = ['topic']
 heading.extend(feature_words)
 
-feature_vector_tfidf.append(heading)
+feature_vector.append(heading)
+
+attribute_type = ['discrete'] * (len(feature_words) + 1)
+
+feature_vector.append(attribute_type)
+
+feature_type = ['class']
+
+feature_vector.append(feature_type)
 
 # Creating the feature vectors by iterating over feature words
 for i in tf_Idf.keys():
     row = [i]
     for word in feature_words:
         if word in tf_Idf[i]:
-            row.append(tf_Idf[i][word])
+            row.append(1)
         else:
             row.append(0)
-    feature_vector_tfidf.append(row)
+    feature_vector.append(row)
 
 # Writing to the tab file which can be opened using excel
 with open('../Output/FeatureVector_tfidf.tab', 'wb') as f:
     w = csv.writer(f, delimiter='\t')
-    w.writerows(feature_vector_tfidf)
+    w.writerows(feature_vector)
