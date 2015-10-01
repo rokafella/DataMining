@@ -9,7 +9,7 @@ from nltk.stem.snowball import SnowballStemmer
 
 __author__ = "Rohit Kapoor and Nandkumar Khobare"
 
-allfiles = glob.glob("../DataSet/*.sgm")
+allfiles = glob.glob("../DataSet/*000.sgm")
 tags = ['places', 'title', 'dateline', 'body']
 stop = stopwords.words('english')
 stemmer = SnowballStemmer('english')
@@ -116,7 +116,7 @@ for i in tf_Idf.keys():
             row.append(0)
     feature_vector_tfidf.append(row)
 
-# Writing to the csv file which can be opened using excel
-with open('../Output/FeatureVector_tfidf.csv', 'wb') as f:
-    w = csv.writer(f)
+# Writing to the tab file which can be opened using excel
+with open('../Output/FeatureVector_tfidf.tab', 'wb') as f:
+    w = csv.writer(f, delimiter='\t')
     w.writerows(feature_vector_tfidf)
