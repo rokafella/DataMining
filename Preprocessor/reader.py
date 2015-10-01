@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import glob
 import string
+import time
 import math
 import csv
 import Orange
@@ -133,13 +134,29 @@ with open('../Output/FeatureVector.tab', 'wb') as f:
     w = csv.writer(f, delimiter='\t')
     w.writerows(feature_vector)
 
+accurate_word_count = 0
+total_word_count = 1000
 # Loading the feature vector in Orange
 data = Orange.data.Table('../Output/FeatureVector.tab')
 
-test = Orange.data.Table(random.sample(data, 20))
+test = Orange.data.Table(random.sample(data, total_word_count))
 train = Orange.data.Table([d for d in data if d not in test])
 
+start = time.clock()
+print "Start time is : " + str(start)
+
+# classifier = Orange.classification.knn.kNNLearner(train)
 classifier = Orange.classification.bayes.NaiveLearner(train)
 
 for d in test:
     print "%10s; originally %s" % (classifier(d), d.getclass())
+    if classifier(d) == d.getclass():
+        accurate_word_count += 1
+
+end = time.clock()
+print "End time is : " + str(end)
+print "Execution time in seconds : " + str(end - start)
+
+print accurate_word_count
+print "Accuracy percentage : " + str(float(accurate_word_count * 100 / total_word_count))
+
