@@ -3,13 +3,15 @@ import glob
 import string
 import math
 import csv
+import Orange
+import random
 from newcollections import Counter
 from nltk.corpus import stopwords
 from nltk.stem.snowball import SnowballStemmer
 
 __author__ = "Rohit Kapoor and Nandkumar Khobare"
 
-allfiles = glob.glob("../DataSet/*000.sgm")
+allfiles = glob.glob("../DataSet/*.sgm")
 tags = ['places', 'title', 'dateline', 'body']
 stop = stopwords.words('english')
 stemmer = SnowballStemmer('english')
@@ -126,7 +128,18 @@ for i in tf_Idf.keys():
                 row.append(0)
         feature_vector.append(row)
 
-# Writing to the tab file which can be opened using excel
-with open('../Output/FeatureVector_tfidf.tab', 'wb') as f:
+# Writing to the tab file which will be used by Orange
+with open('../Output/FeatureVector.tab', 'wb') as f:
     w = csv.writer(f, delimiter='\t')
     w.writerows(feature_vector)
+
+# Loading the feature vector in Orange
+data = Orange.data.Table('../Output/FeatureVector.tab')
+
+test = Orange.data.Table(random.sample(data, 20))
+train = Orange.data.Table([d for d in data if d not in test])
+
+classifier = Orange.classification.bayes.NaiveLearner(train)
+
+for d in test:
+    print "%10s; originally %s" % (classifier(d), d.getclass())
