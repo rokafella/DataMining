@@ -194,7 +194,7 @@ for current_features in [features, features_reduced]:
     start = time.clock()
     print "Starting training: " + str(start)
 
-    #classifier = Orange.classification.knn.kNNLearner(train)
+    # classifier = Orange.classification.knn.kNNLearner(train)
     classifier = Orange.classification.bayes.NaiveLearner(train)
 
     end = time.clock()
