@@ -1,5 +1,5 @@
 run:
-	cd Classifier; python reader.py
+	cd Processor; python reader.py
 	
 clean:
 	rm Output/*
