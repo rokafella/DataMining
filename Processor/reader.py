@@ -4,36 +4,35 @@ import string
 import time
 import math
 import csv
-import Orange
 import numpy
 from newcollections import Counter
+from random import randint
 from nltk.corpus import stopwords
 from nltk.stem.snowball import SnowballStemmer
 
 __author__ = "Rohit Kapoor and Nandkumar Khobare"
 
-allfiles = glob.glob("../DataSet/*.sgm")
+PRIME = 655241
+#PRIME = 341827
+
+allfiles = glob.glob("../DataSet/*00*.sgm")
 tags = ['places', 'title', 'body']
 stop = stopwords.words('english')
 stemmer = SnowballStemmer('english')
 
-# Configuration parameters
-features = 2048
-
 # To count the total number of articles
-articles = 0
+document_id = 0
 
-# Dictionary storing all the documents and word frequencies
-tf = {}
+# To store all shingles with their ID
+shingle_dict = {}
 
-# Dictionary storing all the topics with there document ID
-topic_dict = {}
+# To store shingle IDs in every documents
+shingles_per_doc = {}
 
-# List to store unique words per article to find in how many articles a word is appearing
-uniqueWords = []
+# To store words per doc
+words_per_doc = {}
 
-# A set of all topics
-topic_set = set()
+shingle_count = 0
 
 # Reading file and creating Term Frequencies per article
 for datafile in allfiles:
@@ -47,10 +46,7 @@ for datafile in allfiles:
         if topic:
             topic_text = topic.get_text(' ').encode("ascii", "ignore")
             if len(topic_text) > 0:
-                articles += 1
-                topic_list = topic_text.split(' ')
-                topic_dict[articles] = topic_list
-                topic_set = topic_set.union(topic_list)
+                document_id += 1
                 for tag in tags:
                     text = article.find(tag)
                     if text:
@@ -58,161 +54,120 @@ for datafile in allfiles:
                         final_string = text.translate(None, string.punctuation).lower()
                         filtered_words = [stemmer.stem(word) for word in final_string.split() if word not in stop and not word.isdigit()]
                         words += filtered_words
-                tf[articles] = Counter(words)
-                uniqueWords += Counter(words).keys()
+
+                words_per_doc[document_id] = words
+                shingles_list = []
+
+                for index, word in enumerate(words[:-2]):
+                    shingle = word + " " + words[index + 1] + " " + words[index + 2]
+                    shingle_id = None
+                    if shingle in shingle_dict:
+                        shingle_id = shingle_dict[shingle]
+                    else:
+                        shingle_id = shingle_count
+                        shingle_dict[shingle] = shingle_id
+                        shingle_count += 1
+                    shingles_list.append(shingle_id)
+
+                shingles_per_doc[document_id] = shingles_list
 
     print datafile + " done"
 
-# Count of how many articles a word is appearing in
-appearance = Counter(uniqueWords)
 
-# Saving inverse document frequencies
-idf = Counter()
-
-# Counting the IDF for all the words
-for word in appearance.keys():
-    idf[word] = math.log10(articles / appearance[word])
-
-# Filtering out topics from idf
-for word in idf.keys():
-    if word in topic_set:
-        del idf[word]
-
-# Filtering out top words with lowest idf
-feature_words = [key for (key, value) in idf.most_common()[:-features:-1]]
-
-# For storing the feature vector
-feature_vector = []
-
-# First column of the matrix representing class
-heading = ['topic']
-heading.extend(feature_words)
-
-feature_vector.append(heading)
-
-# Adding Orange attribute type
-attribute_type = ['d'] * (len(feature_words) + 1)
-feature_vector.append(attribute_type)
-
-feature_type = ['c']
-feature_vector.append(feature_type)
-topic_seq = []
-
-# Creating the feature vectors by iterating over feature words
-for i in tf.keys():
-    topics = topic_dict[i]
-    for topic in topics:
-        row = [topic]
-        topic_seq.append(topic)
-        for word in feature_words:
-            if word in tf[i]:
-                row.append(1)
-            else:
-                row.append(0)
-        feature_vector.append(row)
-
-# Writing to the tab file which will be used by Orange
-with open('../Output/FeatureVector.tab', 'wb') as f:
-    w = csv.writer(f, delimiter='\t')
-    w.writerows(feature_vector)
-
-file_name = '../Output/FeatureVector.tab'
-
-# Loading the feature vector in Orange
-data = Orange.data.Table(file_name)
-
-
-def callback(km):
-    print "Iteration: %d, changes: %d, score: %.4f" % (km.iteration, km.nchanges, km.score)
-
-
-def entropy(clusters):
-        container = {}
-
-        for t, cluster in clusters:
-            if cluster in container:
-                container[cluster].append(t)
-            else:
-                container[cluster] = [t]
-
-        entropy_final = 0.0
-
-        for id in container.keys():
-            topic_count = Counter(container[id])
-            ent = 0.0
-            for t in topic_count.keys():
-                ent += (float(topic_count[t]) / clusters_count[id]) * math.log((float(clusters_count[id]) / topic_count[t]), 2)
-            entropy_final += (float(clusters_count[id]) / len(topic_seq)) * ent
-        return entropy_final
-
-choice = input("Please select 1->Kmeans and 2->Hierarchical: ")
-
-distance = input("Please select a distance metric 1->Euclidean and 2->Manhattan: ")
-
-if distance == 1:
-    distance = Orange.distance.Euclidean
-else:
-    distance = Orange.distance.Manhattan
-
-clusters_count = {}
-
-if choice == 1:
-
-    print "Starting Kmeans clustering"
-
-    start = time.clock()
-
-    km = Orange.clustering.kmeans.Clustering(data, 77, minscorechange=0, inner_callback=callback, distance=distance)
-
-    end = time.clock()
-
-    print "Clustering time: " + str(end - start)
-
-    clusters_count = Counter(km.clusters)
-
-    print 'Silhouette: ' + str(Orange.clustering.kmeans.score_fast_silhouette(km))
-    print 'Entropy: ' + str(entropy(zip(topic_seq, km.clusters)))
-    print 'Variance: ' + str(numpy.var(clusters_count.values()))
-
-else:
-
-    linkage = input("Please select a linkage 1->Single, 2->Average, 3->Complete: ")
-
-    if linkage == 1:
-        linkage = Orange.clustering.hierarchical.SINGLE
-    elif linkage == 2:
-        linkage = Orange.clustering.hierarchical.AVERAGE
+def get_jaccard(list_a, list_b):
+    set_a = set(list_a)
+    set_b = set(list_b)
+    intersection = len(set_a.intersection(set_b))
+    union = len(set_a) + len(set_b) - intersection
+    if union == 0:
+        return 0
     else:
-        linkage = Orange.clustering.hierarchical.COMPLETE
+        return intersection / float(union)
 
-    print "Starting Hierarchical clustering"
+
+def get_hash(param_a, param_b, shingle_index):
+    return (((param_a * shingle_index) + param_b) % PRIME) % shingle_count
+
+print "Number of documents: " + str(document_id)
+print "Number of shingles: " + str(shingle_count)
+# k = input("Please enter the value of k:")
+
+print "Generating baseline similarity"
+
+start = time.clock()
+
+true_jaccard = {}
+
+for i in range(1, document_id + 1):
+    true_jaccard[i] = []
+    for j in range(i + 1, document_id + 1):
+        true_jaccard[i].append(get_jaccard(words_per_doc[i], words_per_doc[j]))
+
+end = time.clock()
+
+print "Completed baseline similarity in time: " + str(end - start)
+
+k_values = [16, 32, 64, 128, 256]
+
+for k in k_values:
+    used_a = set()
+    used_b = set()
+
+    signature_matrix = {}
+
+    print "Generating k-minhash sketch for k = " + str(k)
 
     start = time.clock()
 
-    matrix = Orange.distance.distance_matrix(data, distance)
+    for i in range(1, k + 1):
+        a = randint(1, shingle_count)
+        while a in used_a:
+            a = randint(1, shingle_count)
+            used_a.add(a)
 
-    clustering = Orange.clustering.hierarchical.HierarchicalClustering()
-    clustering.linkage = linkage
+        b = randint(1, shingle_count)
+        while b in used_b:
+            b = randint(1, shingle_count)
+            used_b.add(b)
 
-    root = clustering(matrix)
-
-    root.mapping.objects = data
+        for doc, shingles in shingles_per_doc.iteritems():
+            minimum = shingle_count + 1
+            for shingle in shingles:
+                h = get_hash(a, b, shingle)
+                if h < minimum:
+                    minimum = h
+            if doc in signature_matrix:
+                signature_matrix[doc].append(minimum)
+            else:
+                signature_matrix[doc] = [minimum]
 
     end = time.clock()
 
-    print "Clustering time: " + str(end - start)
+    print "Completed k-minhash sketch in time: " + str(end - start)
 
-    topmost = sorted(Orange.clustering.hierarchical.top_clusters(root, 77), key=len)
+    k_minhash_estimate = {}
 
-    ls_topic = []
+    print "Generating jaccard estimate from k-minhash"
 
-    for n, cluster in enumerate(topmost):
-        print str(n) + '--->' + str(len(cluster))
-        clusters_count[n] = len(cluster)
-        for inst in cluster:
-            ls_topic.append((str(inst[-1]), n))
+    start = time.clock()
 
-    print ls_topic
-    print clusters_count
-    print 'Entropy: ' + str(entropy(ls_topic))
-    print 'Variance: ' + str(numpy.var(clusters_count.values()))
+    for i in range(1, document_id + 1):
+        k_minhash_estimate[i] = []
+        for j in range(i + 1, document_id + 1):
+            k_minhash_estimate[i].append(get_jaccard(signature_matrix[i], signature_matrix[j]))
+
+    end = time.clock()
+
+    print "Completed jaccard estimate from k-minhash for k = " + str(k) + " in time: " + str(end - start)
+
+    comparisons = 0
+    square_error = 0
+
+    for i, val in k_minhash_estimate.iteritems():
+        true_sim = true_jaccard[i]
+        for idx, estimate in enumerate(val):
+            comparisons += 1
+            square_error += (true_sim[idx] - estimate)**2
+
+    print "Number of comparisons: " + str(comparisons)
+    print "Mean squared error: " + str(square_error / comparisons)
