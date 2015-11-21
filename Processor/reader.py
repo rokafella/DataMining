@@ -2,10 +2,6 @@ from bs4 import BeautifulSoup
 import glob
 import string
 import time
-import math
-import csv
-import numpy
-from newcollections import Counter
 from random import randint
 from nltk.corpus import stopwords
 from nltk.stem.snowball import SnowballStemmer
@@ -90,7 +86,6 @@ def get_hash(param_a, param_b, shingle_index):
 
 print "Number of documents: " + str(document_id)
 print "Number of shingles: " + str(shingle_count)
-# k = input("Please enter the value of k:")
 
 print "Generating baseline similarity"
 
@@ -107,67 +102,66 @@ end = time.clock()
 
 print "Completed baseline similarity in time: " + str(end - start)
 
-k_values = [16, 32, 64, 128, 256]
+k = input("Please enter the value of k:")
 
-for k in k_values:
-    used_a = set()
-    used_b = set()
+used_a = set()
+used_b = set()
 
-    signature_matrix = {}
+signature_matrix = {}
 
-    print "Generating k-minhash sketch for k = " + str(k)
+print "Generating k-minhash sketch for k = " + str(k)
 
-    start = time.clock()
+start = time.clock()
 
-    for i in range(1, k + 1):
+for i in range(1, k + 1):
+    a = randint(1, shingle_count)
+    while a in used_a:
         a = randint(1, shingle_count)
-        while a in used_a:
-            a = randint(1, shingle_count)
-            used_a.add(a)
+        used_a.add(a)
 
+    b = randint(1, shingle_count)
+    while b in used_b:
         b = randint(1, shingle_count)
-        while b in used_b:
-            b = randint(1, shingle_count)
-            used_b.add(b)
+        used_b.add(b)
 
-        for doc, shingles in shingles_per_doc.iteritems():
-            minimum = shingle_count + 1
-            for shingle in shingles:
-                h = get_hash(a, b, shingle)
-                if h < minimum:
-                    minimum = h
-            if doc in signature_matrix:
-                signature_matrix[doc].append(minimum)
-            else:
-                signature_matrix[doc] = [minimum]
+    for doc, shingles in shingles_per_doc.iteritems():
+        minimum = shingle_count + 1
+        for shingle in shingles:
+            h = get_hash(a, b, shingle)
+            if h < minimum:
+                minimum = h
+        if doc in signature_matrix:
+            signature_matrix[doc].append(minimum)
+        else:
+            signature_matrix[doc] = [minimum]
 
-    end = time.clock()
+end = time.clock()
 
-    print "Completed k-minhash sketch in time: " + str(end - start)
+print "Completed k-minhash sketch in time: " + str(end - start)
 
-    k_minhash_estimate = {}
+k_minhash_estimate = {}
 
-    print "Generating jaccard estimate from k-minhash"
+print "Generating jaccard estimate from k-minhash"
 
-    start = time.clock()
+start = time.clock()
 
-    for i in range(1, document_id + 1):
-        k_minhash_estimate[i] = []
-        for j in range(i + 1, document_id + 1):
-            k_minhash_estimate[i].append(get_jaccard(signature_matrix[i], signature_matrix[j]))
+for i in range(1, document_id + 1):
+    k_minhash_estimate[i] = []
+    for j in range(i + 1, document_id + 1):
+        k_minhash_estimate[i].append(get_jaccard(signature_matrix[i], signature_matrix[j]))
 
-    end = time.clock()
+end = time.clock()
 
-    print "Completed jaccard estimate from k-minhash for k = " + str(k) + " in time: " + str(end - start)
+print "Completed jaccard estimate from k-minhash for k = " + str(k) + " in time: " + str(end - start)
 
-    comparisons = 0
-    square_error = 0
+comparisons = 0
+square_error = 0
 
-    for i, val in k_minhash_estimate.iteritems():
-        true_sim = true_jaccard[i]
-        for idx, estimate in enumerate(val):
-            comparisons += 1
-            square_error += (true_sim[idx] - estimate)**2
+for i, val in k_minhash_estimate.iteritems():
+    true_sim = true_jaccard[i]
+    for idx, estimate in enumerate(val):
+        comparisons += 1
+        square_error += (true_sim[idx] - estimate)**2
 
-    print "Number of comparisons: " + str(comparisons)
-    print "Mean squared error: " + str(square_error / comparisons)
+print "Number of comparisons: " + str(comparisons)
+print "Mean squared error: " + str(square_error / comparisons)
